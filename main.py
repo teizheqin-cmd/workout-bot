@@ -2,8 +2,8 @@ import logging
 import os
 import sys
 import traceback
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -12,8 +12,7 @@ logging.basicConfig(
 )
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
-RENDER_URL = os.environ.get("RENDER_URL", "").strip()
-PORT = int(os.environ.get("PORT", 8080))
+PORT = int(os.environ.get("PORT", 10000))
 
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -30,8 +29,6 @@ def run_health_server():
 def main():
     print("=== STARTUP DEBUG ===", flush=True)
     print(f"BOT_TOKEN set: {bool(BOT_TOKEN)}", flush=True)
-    print(f"RENDER_URL: {RENDER_URL}", flush=True)
-    print(f"PORT: {PORT}", flush=True)
 
     if not BOT_TOKEN:
         print("ERROR: BOT_TOKEN is not set!", flush=True)
@@ -68,7 +65,37 @@ def main():
         sys.exit(1)
 
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await update.message.reply_text("💪 Workout Bot 已启动！直接发运动记录给我吧。")
+        await update.message.reply_text(
+            "💪 *Workout Bot 已启动！*\n\n"
+            "直接发你的运动记录给我，我会帮你：\n"
+            "  • 分析并记录到 Google Sheets\n"
+            "  • 给你专业反馈\n\n"
+            "命令：\n"
+            "  /summary — 查看最近10次运动记录\n"
+            "  /help — 帮助\n\n"
+            "例子：\n"
+            "_今天练胸，卧推4组10下80kg，飞鸟3组12下15kg，跑步20分钟_",
+            parse_mode="Markdown"
+        )
+
+    async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await update.message.reply_text(
+            "📋 *使用方法*\n\n"
+            "直接发你的运动内容，格式随意，例如：\n\n"
+            "• 今天深蹲4x10 100kg，硬拉3x8 120kg\n"
+            "• Chest day: bench press 4x10 80kg\n"
+            "• 跑步45分钟，心率150，距离8km\n\n"
+            "记录会自动保存到你的 Google Sheets 💬",
+            parse_mode="Markdown"
+        )
+
+    async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await update.message.reply_text("⏳ 读取中...")
+        try:
+            text = get_summary()
+            await update.message.reply_text(text, parse_mode="Markdown")
+        except Exception as e:
+            await update.message.reply_text(f"❌ 读取失败：{e}")
 
     async def handle_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_message = update.message.text
@@ -77,7 +104,7 @@ def main():
             result = analyze_workout(user_message)
             append_workout_row(result, user_message)
             reply = (
-                f"✅ *已记录！*\n\n"
+                f"✅ *已记录到 Google Sheets！*\n\n"
                 f"📅 {result['date']}\n"
                 f"🏋️ {result['workout_type']}\n"
                 f"⏱️ {result['duration']}\n"
@@ -88,30 +115,14 @@ def main():
         except Exception as e:
             await update.message.reply_text(f"❌ 出错了：{e}")
 
-    async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await update.message.reply_text("⏳ 读取中...")
-        try:
-            text = get_summary()
-            await update.message.reply_text(text, parse_mode="Markdown")
-        except Exception as e:
-            await update.message.reply_text(f"❌ 读取失败：{e}")
-
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("summary", summary))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_workout))
 
-    if RENDER_URL:
-        print("Starting webhook mode...", flush=True)
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=BOT_TOKEN,
-            webhook_url=f"{RENDER_URL}/{BOT_TOKEN}"
-        )
-    else:
-        print("Starting polling mode...", flush=True)
-        app.run_polling()
+    print("Starting polling mode...", flush=True)
+    app.run_polling()
 
 if __name__ == "__main__":
     try:
