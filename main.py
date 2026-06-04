@@ -98,7 +98,7 @@ def main():
 
     async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_message = update.message.text
-        await update.message.reply_text("⏳ Coach Lee 正在分析...")
+        await update.message.reply_text("⏳ GYM Coach 正在分析...")
 
         try:
             msg_type = classify_message(user_message)
