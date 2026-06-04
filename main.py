@@ -49,7 +49,7 @@ def main():
         sys.exit(1)
 
     try:
-        from gemini_helper import analyze_workout
+        from gemini_helper import analyze_workout, answer_question, classify_message
         print("Gemini imported OK", flush=True)
     except Exception as e:
         print(f"ERROR importing gemini_helper: {e}", flush=True)
@@ -67,25 +67,30 @@ def main():
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "💪 *Workout Bot 已启动！*\n\n"
-            "直接发你的运动记录给我，我会帮你：\n"
-            "  • 分析并记录到 Google Sheets\n"
-            "  • 给你专业反馈\n\n"
-            "命令：\n"
-            "  /summary — 查看最近10次运动记录\n"
-            "  /help — 帮助\n\n"
+            "我可以帮你：\n"
+            "  • 📝 记录运动 → 直接发你的运动记录\n"
+            "  • 🤔 回答健身问题 → 直接问我\n"
+            "  • 📊 查看记录 → /summary\n\n"
             "例子：\n"
-            "_今天练胸，卧推4组10下80kg，飞鸟3组12下15kg，跑步20分钟_",
+            "_今天卧推4组10下80kg，跑步20分钟_\n"
+            "_我想减脂应该怎么训练？_\n"
+            "_蛋白质一天要吃多少？_",
             parse_mode="Markdown"
         )
 
     async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "📋 *使用方法*\n\n"
-            "直接发你的运动内容，格式随意，例如：\n\n"
-            "• 今天深蹲4x10 100kg，硬拉3x8 120kg\n"
-            "• Chest day: bench press 4x10 80kg\n"
-            "• 跑步45分钟，心率150，距离8km\n\n"
-            "记录会自动保存到你的 Google Sheets 💬",
+            "*记录运动：*\n"
+            "直接发运动内容，例如：\n"
+            "今天深蹲4x10 100kg，跑步30分钟\n\n"
+            "*问健身问题：*\n"
+            "直接问，例如：\n"
+            "• 我想增肌应该怎么吃？\n"
+            "• 深蹲正确姿势是什么？\n"
+            "• 一周练几次比较好？\n\n"
+            "*命令：*\n"
+            "/summary — 查看最近10次运动记录",
             parse_mode="Markdown"
         )
 
@@ -97,29 +102,42 @@ def main():
         except Exception as e:
             await update.message.reply_text(f"❌ 读取失败：{e}")
 
-    async def handle_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_message = update.message.text
-        await update.message.reply_text("⏳ 正在分析...")
+        await update.message.reply_text("⏳ 正在处理...")
+
         try:
-            result = analyze_workout(user_message)
-            append_workout_row(result, user_message)
-            reply = (
-                f"✅ *已记录到 Google Sheets！*\n\n"
-                f"📅 {result['date']}\n"
-                f"🏋️ {result['workout_type']}\n"
-                f"⏱️ {result['duration']}\n"
-                f"📝 {result['exercises_summary']}\n\n"
-                f"💬 *反馈：*\n{result['feedback']}"
-            )
+            # Auto classify: workout log or question?
+            msg_type = classify_message(user_message)
+
+            if msg_type == "workout_log":
+                # Record workout
+                result = analyze_workout(user_message)
+                append_workout_row(result, user_message)
+                reply = (
+                    f"✅ *已记录到 Google Sheets！*\n\n"
+                    f"📅 {result['date']}\n"
+                    f"🏋️ {result['workout_type']}\n"
+                    f"⏱️ {result['duration']}\n"
+                    f"📝 {result['exercises_summary']}\n\n"
+                    f"💬 *教练反馈：*\n{result['feedback']}"
+                )
+            else:
+                # Answer fitness question
+                answer = answer_question(user_message)
+                reply = f"🏋️ *教练回答：*\n\n{answer}"
+
             await update.message.reply_text(reply, parse_mode="Markdown")
+
         except Exception as e:
+            logging.error(f"Error: {e}")
             await update.message.reply_text(f"❌ 出错了：{e}")
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("summary", summary))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_workout))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("Starting polling mode...", flush=True)
     app.run_polling()
