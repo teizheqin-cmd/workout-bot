@@ -15,7 +15,6 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 RENDER_URL = os.environ.get("RENDER_URL", "").strip()
 PORT = int(os.environ.get("PORT", 8080))
 
-# Simple health check server
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -38,7 +37,6 @@ def main():
         print("ERROR: BOT_TOKEN is not set!", flush=True)
         sys.exit(1)
 
-    # Start health server in background
     t = threading.Thread(target=run_health_server, daemon=True)
     t.start()
     print("Health server started", flush=True)
@@ -104,7 +102,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_workout))
 
     if RENDER_URL:
-        print(f"Starting webhook mode...", flush=True)
+        print("Starting webhook mode...", flush=True)
         app.run_webhook(
             listen="0.0.0.0",
             port=PORT,
@@ -112,3 +110,13 @@ def main():
             webhook_url=f"{RENDER_URL}/{BOT_TOKEN}"
         )
     else:
+        print("Starting polling mode...", flush=True)
+        app.run_polling()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print(f"FATAL ERROR: {e}", flush=True)
+        traceback.print_exc(file=sys.stdout)
+        sys.exit(1)
