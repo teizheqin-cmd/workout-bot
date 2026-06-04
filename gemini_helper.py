@@ -5,7 +5,7 @@ from datetime import date
 import google.generativeai as genai
 
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 SYSTEM_PROMPT = """You are a fitness coach assistant. The user will send you their workout log in any language (English, Chinese, Malay, or mixed).
 
