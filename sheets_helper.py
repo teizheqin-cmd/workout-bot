@@ -40,7 +40,7 @@ def _get_sheet():
         })
     return ws
 
-def get_recent_history(limit: int = 5) -> str:
+def get_recent_history(limit: int = 999) -> str:
     """Get last N workouts as text for Gemini context"""
     try:
         ws = _get_sheet()
