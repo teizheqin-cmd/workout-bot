@@ -66,36 +66,33 @@ def main():
 
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
-            "💪 *Coach Lee 准备好了！*\n\n"
+            "💪 Coach Lee 准备好了！\n\n"
             "我是你的私人健身教练，我可以：\n\n"
-            "  📝 *记录运动* — 发你的运动记录给我\n"
-            "  📊 *对比分析* — 跟你之前的训练对比\n"
-            "  💬 *回答问题* — 任何健身、营养问题\n"
-            "  📈 *查看记录* — /summary\n\n"
-            "来吧，把你的运动发给我！💪",
-            parse_mode="Markdown"
+            "📝 记录运动 — 发你的运动记录给我\n"
+            "📊 对比分析 — 跟你之前的训练对比\n"
+            "💬 回答问题 — 任何健身、营养问题\n"
+            "📈 查看记录 — /summary\n\n"
+            "来吧，把你的运动发给我！💪"
         )
 
     async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
-            "📋 *使用方法*\n\n"
-            "*📝 记录运动：*\n"
+            "📋 使用方法\n\n"
+            "📝 记录运动：\n"
             "直接发运动内容，例如：\n"
-            "_今天深蹲4x10 100kg，跑步30分钟_\n\n"
-            "*💬 问健身问题：*\n"
+            "今天深蹲4x10 100kg，跑步30分钟\n\n"
+            "💬 问健身问题：\n"
             "直接问，例如：\n"
-            "• 我想减脂应该怎么吃？\n"
-            "• 深蹲正确姿势是什么？\n"
-            "• 肩膀怎么练比较有效？\n\n"
-            "*📊 查看记录：* /summary",
-            parse_mode="Markdown"
+            "我想减脂应该怎么吃？\n"
+            "肩膀怎么练比较有效？\n\n"
+            "📊 查看记录：/summary"
         )
 
     async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⏳ 读取中...")
         try:
             text = get_summary()
-            await update.message.reply_text(text, parse_mode="Markdown")
+            await update.message.reply_text(text)
         except Exception as e:
             await update.message.reply_text(f"❌ 读取失败：{e}")
 
@@ -107,27 +104,26 @@ def main():
             msg_type = classify_message(user_message)
 
             if msg_type == "workout_log":
-                # Get history for comparison
-                history = get_recent_history(limit=5)
+                history = get_recent_history()
                 result = analyze_workout(user_message, history)
                 append_workout_row(result, user_message)
                 reply = (
-                    f"✅ *已记录！*\n\n"
+                    f"✅ 已记录！\n\n"
                     f"📅 {result['date']} | 🏋️ {result['workout_type']} | "
                     f"⏱️ {result['duration']} | 💪 {result['intensity']}\n\n"
                     f"{result['feedback']}"
                 )
             else:
                 answer = answer_question(user_message)
-                reply = f"🏋️ *Coach Lee：*\n\n{answer}"
+                reply = f"🏋️ Coach Lee：\n\n{answer}"
 
-            # Telegram message limit is 4096 chars, split if needed
+            # Split if message too long
             if len(reply) > 4000:
                 parts = [reply[i:i+4000] for i in range(0, len(reply), 4000)]
                 for part in parts:
-                    await update.message.reply_text(part, parse_mode="Markdown")
+                    await update.message.reply_text(part)
             else:
-                await update.message.reply_text(reply, parse_mode="Markdown")
+                await update.message.reply_text(reply)
 
         except Exception as e:
             logging.error(f"Error: {e}")
