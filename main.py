@@ -66,7 +66,7 @@ def main():
 
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
-            "💪 Coach Lee 准备好了！\n\n"
+            "💪 GYM Coach 准备好了！\n\n"
             "我是你的私人健身教练，我可以：\n\n"
             "📝 记录运动 — 发你的运动记录给我\n"
             "📊 对比分析 — 跟你之前的训练对比\n"
@@ -115,7 +115,7 @@ def main():
                 )
             else:
                 answer = answer_question(user_message)
-                reply = f"🏋️ Coach Lee：\n\n{answer}"
+                reply = f"🏋️ GYM Coach：\n\n{answer}"
 
             # Split if message too long
             if len(reply) > 4000:
