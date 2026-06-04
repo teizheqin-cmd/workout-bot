@@ -57,7 +57,7 @@ def main():
         sys.exit(1)
 
     try:
-        from sheets_helper import append_workout_row, get_summary
+        from sheets_helper import append_workout_row, get_summary, get_recent_history
         print("Sheets imported OK", flush=True)
     except Exception as e:
         print(f"ERROR importing sheets_helper: {e}", flush=True)
@@ -66,31 +66,28 @@ def main():
 
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
-            "💪 *Workout Bot 已启动！*\n\n"
-            "我可以帮你：\n"
-            "  • 📝 记录运动 → 直接发你的运动记录\n"
-            "  • 🤔 回答健身问题 → 直接问我\n"
-            "  • 📊 查看记录 → /summary\n\n"
-            "例子：\n"
-            "_今天卧推4组10下80kg，跑步20分钟_\n"
-            "_我想减脂应该怎么训练？_\n"
-            "_蛋白质一天要吃多少？_",
+            "💪 *Coach Lee 准备好了！*\n\n"
+            "我是你的私人健身教练，我可以：\n\n"
+            "  📝 *记录运动* — 发你的运动记录给我\n"
+            "  📊 *对比分析* — 跟你之前的训练对比\n"
+            "  💬 *回答问题* — 任何健身、营养问题\n"
+            "  📈 *查看记录* — /summary\n\n"
+            "来吧，把你的运动发给我！💪",
             parse_mode="Markdown"
         )
 
     async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "📋 *使用方法*\n\n"
-            "*记录运动：*\n"
+            "*📝 记录运动：*\n"
             "直接发运动内容，例如：\n"
-            "今天深蹲4x10 100kg，跑步30分钟\n\n"
-            "*问健身问题：*\n"
+            "_今天深蹲4x10 100kg，跑步30分钟_\n\n"
+            "*💬 问健身问题：*\n"
             "直接问，例如：\n"
-            "• 我想增肌应该怎么吃？\n"
+            "• 我想减脂应该怎么吃？\n"
             "• 深蹲正确姿势是什么？\n"
-            "• 一周练几次比较好？\n\n"
-            "*命令：*\n"
-            "/summary — 查看最近10次运动记录",
+            "• 肩膀怎么练比较有效？\n\n"
+            "*📊 查看记录：* /summary",
             parse_mode="Markdown"
         )
 
@@ -104,30 +101,33 @@ def main():
 
     async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_message = update.message.text
-        await update.message.reply_text("⏳ 正在处理...")
+        await update.message.reply_text("⏳ Coach Lee 正在分析...")
 
         try:
-            # Auto classify: workout log or question?
             msg_type = classify_message(user_message)
 
             if msg_type == "workout_log":
-                # Record workout
-                result = analyze_workout(user_message)
+                # Get history for comparison
+                history = get_recent_history(limit=5)
+                result = analyze_workout(user_message, history)
                 append_workout_row(result, user_message)
                 reply = (
-                    f"✅ *已记录到 Google Sheets！*\n\n"
-                    f"📅 {result['date']}\n"
-                    f"🏋️ {result['workout_type']}\n"
-                    f"⏱️ {result['duration']}\n"
-                    f"📝 {result['exercises_summary']}\n\n"
-                    f"💬 *教练反馈：*\n{result['feedback']}"
+                    f"✅ *已记录！*\n\n"
+                    f"📅 {result['date']} | 🏋️ {result['workout_type']} | "
+                    f"⏱️ {result['duration']} | 💪 {result['intensity']}\n\n"
+                    f"{result['feedback']}"
                 )
             else:
-                # Answer fitness question
                 answer = answer_question(user_message)
-                reply = f"🏋️ *教练回答：*\n\n{answer}"
+                reply = f"🏋️ *Coach Lee：*\n\n{answer}"
 
-            await update.message.reply_text(reply, parse_mode="Markdown")
+            # Telegram message limit is 4096 chars, split if needed
+            if len(reply) > 4000:
+                parts = [reply[i:i+4000] for i in range(0, len(reply), 4000)]
+                for part in parts:
+                    await update.message.reply_text(part, parse_mode="Markdown")
+            else:
+                await update.message.reply_text(reply, parse_mode="Markdown")
 
         except Exception as e:
             logging.error(f"Error: {e}")
