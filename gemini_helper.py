@@ -5,7 +5,7 @@ from datetime import date
 import google.generativeai as genai
 
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = genai.GenerativeModel("gemini-3.1-flash-lite")
 
 USER_PROFILE = """
 关于这位用户：
